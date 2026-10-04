@@ -1,268 +1,123 @@
-Kafka CDC Telemetry Platform
-
-A production-oriented Change Data Capture (CDC) and observability lab built around PostgreSQL, Debezium, Apache Kafka, Python, OpenTelemetry, Prometheus, Jaeger, and Grafana.
-
-The project demonstrates an end-to-end event-driven data pipeline in which database changes are captured from PostgreSQL's WAL, published to Kafka by Debezium, consumed by a Python application, persisted into an analytics database, and instrumented with distributed traces and application metrics.
-
-Purpose: Senior Data Engineer / Data Platform interview project focused on CDC, Kafka, Debezium, observability, reliability, and cloud-ready architecture concepts.
-
-Architecture
-
-                         CDC / Streaming Layer
-┌───────────────┐
-│ PostgreSQL    │
-│ app_db        │
-│ public.users  │
-└───────┬───────┘
-        │
-        │ PostgreSQL WAL / logical replication
-        ▼
-┌─────────────────────┐
-│ Debezium            │
-│ PostgreSQL Connector│
-└──────────┬──────────┘
-           │
-           │ CDC events
-           ▼
-┌─────────────────────┐
-│ Apache Kafka        │
-│ topic:              │
-│ cdc.public.users    │
-└──────────┬──────────┘
-           │
-           │ Kafka consumer
-           ▼
-┌──────────────────────────────┐
-│ Python CDC Consumer          │
-│                              │
-│ - Deserialize event          │
-│ - Extract CDC metadata       │
-│ - Persist analytics event    │
-│ - Emit metrics               │
-│ - Create OpenTelemetry spans │
-└───────────┬──────────────────┘
-            │
-            │ INSERT
-            ▼
-┌──────────────────────────────┐
-│ PostgreSQL Analytics         │
-│ analytics_db                 │
-│ table: cdc_events            │
-└──────────────────────────────┘
-
-
-                    Observability Layer
-                    ===================
-
-        Python CDC Consumer
-                │
-                │ OTLP / gRPC
-                ▼
-     ┌─────────────────────────┐
-     │ OpenTelemetry Collector │
-     └───────────┬─────────────┘
-                 │
-          ┌──────┴───────┐
-          │              │
-          ▼              ▼
-      ┌───────┐      ┌────────────┐
-      │ Jaeger│      │ Prometheus │
-      │Traces │      │  Metrics   │
-      └───────┘      └─────┬──────┘
-                            │
-                            ▼
-                       ┌─────────┐
-                       │ Grafana │
-                       └─────────┘
-
-What This Project Demonstrates
-
-CDC
-
-PostgreSQL logical replication
-
-WAL-based change capture
-
-Debezium PostgreSQL connector
-
-Snapshot + streaming CDC
-
-Create / Update / Delete events
-
-Kafka topic-based event distribution
-
-Kafka
-
-Kafka broker and topic
-
-Consumer groups
-
-Partition / offset metadata
-
-Durable event streaming
-
-Kafka Connect internal topics
-
-Consumer processing metrics
-
-Data Engineering
-
-OLTP → CDC → Streaming → Analytics
-
-Event-driven data pipelines
-
-JSON CDC event processing
-
-Analytics event persistence
-
-Source metadata and record identification
-
-Observability
-
-OpenTelemetry SDK
-
-OTLP/gRPC
-
-Distributed tracing
-
-Application metrics
-
-OpenTelemetry Collector
-
-Prometheus
-
-Jaeger
-
-Grafana dashboards
-
-Error and latency instrumentation
-
-Platform / DevOps
-
-Docker Compose
-
-Containerized local environment
-
-Health checks
-
-Service dependencies
-
-Persistent Docker volumes
-
-Environment-based configuration
-
-Technology Stack
-
-Component
-
-Technology
-
-Source database
-
-PostgreSQL 15
-
-Target database
-
-PostgreSQL 15
-
-CDC
-
-Debezium 2.5
-
-Streaming
-
-Apache Kafka
-
-Kafka coordination
-
-Apache ZooKeeper
-
-Kafka integration
-
-Kafka Connect
-
-Schema management
-
-Confluent Schema Registry
-
-Application
-
-Python 3.11
-
-Kafka client
-
-confluent-kafka
-
-PostgreSQL client
-
-psycopg2
-
-Telemetry
-
-OpenTelemetry SDK
-
-Telemetry pipeline
-
-OpenTelemetry Collector
-
-Tracing
-
-Jaeger
-
-Metrics
-
-Prometheus
-
-Visualization
-
-Grafana
-
-Runtime
-
-Docker / Docker Compose
-
-Project Structure
-
-project_KAFKA_CDC_TELEMETRY/
-│
+# Kafka CDC & Telemetry Platform
+
+A local, containerized **Change Data Capture (CDC)** and observability lab built with PostgreSQL, Apache Kafka, Debezium, Python, OpenTelemetry, Prometheus, Jaeger, and Grafana.
+
+The project demonstrates how to capture database changes from an operational PostgreSQL database, publish them as Kafka events, process them with a Python consumer, persist an event audit trail in a separate analytics database, and observe processing behavior with traces and metrics.
+
+> **Scope:** This repository is a local learning and demonstration environment. The Compose configuration uses single-node services and development credentials; it is not a production deployment template.
+
+## Contents
+
+- [Architecture](#architecture)
+- [Technology stack](#technology-stack)
+- [Repository layout](#repository-layout)
+- [Prerequisites](#prerequisites)
+- [Run locally](#run-locally)
+- [Verify the CDC pipeline](#verify-the-cdc-pipeline)
+- [Observability](#observability)
+- [Useful commands](#useful-commands)
+- [Configuration notes](#configuration-notes)
+- [Troubleshooting](#troubleshooting)
+- [Learning objectives](#learning-objectives)
+
+## Architecture
+
+```text
+                         CDC source pipeline
+┌──────────────────┐   PostgreSQL WAL   ┌────────────────────┐
+│ PostgreSQL OLTP   │ ─────────────────► │ Debezium Connector │
+│ app_db.users      │                    │ Kafka Connect      │
+└──────────────────┘                    └─────────┬──────────┘
+                                                  │
+                                                  ▼
+                                        ┌───────────────────┐
+                                        │ Apache Kafka      │
+                                        │ cdc.public.users  │
+                                        └─────────┬─────────┘
+                                                  │
+                                                  ▼
+                                        ┌───────────────────┐
+                                        │ Python CDC         │
+                                        │ Consumer           │
+                                        └─────────┬─────────┘
+                                                  │
+                                                  ▼
+                                        ┌───────────────────┐
+                                        │ PostgreSQL         │
+                                        │ analytics_db       │
+                                        │ cdc_events         │
+                                        └───────────────────┘
+
+                         Telemetry pipeline
+┌───────────────────┐  OTLP/gRPC  ┌──────────────────────┐
+│ Python CDC         │ ──────────► │ OpenTelemetry        │
+│ Consumer           │             │ Collector            │
+└───────────────────┘             └───────┬────────┬─────┘
+                                          │        │
+                               traces     │        │ metrics
+                                          ▼        ▼
+                                     ┌────────┐ ┌────────────┐
+                                     │ Jaeger │ │ Prometheus │
+                                     └───┬────┘ └─────┬──────┘
+                                         └──────┬─────┘
+                                                ▼
+                                           ┌─────────┐
+                                           │ Grafana │
+                                           └─────────┘
+```
+
+### Event lifecycle
+
+1. An insert, update, or delete occurs on `public.users` in the source PostgreSQL database.
+2. PostgreSQL's write-ahead log (WAL), configured for logical replication, exposes the change to Debezium.
+3. Kafka Connect publishes the change to `cdc.public.users`.
+4. The Python consumer reads the event, extracts the operation, source table, record ID, and payload, then writes the event to the analytics database.
+5. The consumer emits OpenTelemetry traces and metrics through the Collector. Traces are sent to Jaeger; metrics are exposed for Prometheus and can be visualized in Grafana.
+
+## Technology stack
+
+| Component | Purpose |
+|---|---|
+| PostgreSQL 15 | Source OLTP database and analytics/event-store database |
+| Apache Kafka | Event streaming and buffering |
+| ZooKeeper | Kafka coordination for this Compose setup |
+| Debezium / Kafka Connect | WAL-based change capture and connector runtime |
+| Schema Registry | Included service for schema-management experiments |
+| Python 3.11 | CDC consumer and synthetic data generator |
+| Confluent Kafka Python client | Kafka consumer implementation |
+| Psycopg2 | PostgreSQL access from Python |
+| OpenTelemetry SDK | Application traces and metrics |
+| OpenTelemetry Collector | Receives OTLP telemetry and routes it to backends |
+| Prometheus | Scrapes Collector metrics |
+| Jaeger | Distributed trace exploration |
+| Grafana | Dashboards for CDC and telemetry |
+| Docker Compose | Local orchestration |
+
+The active connector configuration uses Kafka Connect's JSON converters. Avro-related configuration and the `schemas/users.avsc` file are included for experimentation, but Avro is not the default path in the current Compose configuration.
+
+## Repository layout
+
+```text
+.
 ├── docker/
 │   ├── docker-compose.yml
-│   ├── bootstrap.sh
+│   ├── .env                         # Local development settings
+│   ├── bootstrap.sh                 # Optional setup helper
 │   ├── Dockerfile.consumer
 │   ├── Dockerfile.generator
-│   │
-│   ├── postgres/
-│   │   └── init.sql
-│   │
-│   ├── analytics/
-│   │   └── init.sql
-│   │
 │   ├── connect/
 │   │   ├── debezium-connector.json
 │   │   └── debezium-connector-avro.json
-│   │
-│   ├── otel/
-│   │   └── collector-config.yaml
-│   │
-│   └── prometheus/
-│       └── prometheus.yml
-│
+│   ├── postgres/init.sql            # Source table and sample records
+│   ├── analytics/init.sql           # Analytics event table
+│   ├── prometheus/prometheus.yml
+│   └── otel/collector-config.yaml
 ├── grafana/
 │   ├── dashboards/
 │   │   ├── cdc_dashboard.json
 │   │   └── otel_observability.json
-│   │
 │   └── provisioning/
-│       ├── dashboards/
-│       │   └── dashboard.yml
-│       │
-│       └── datasources/
-│           ├── datasource.yml
-│           └── observability.yml
-│
-├── schemas/
-│   └── users.avsc
-│
+├── schemas/users.avsc
 ├── src/
 │   ├── consumer/
 │   │   ├── cli.py
@@ -270,492 +125,122 @@ project_KAFKA_CDC_TELEMETRY/
 │   │   ├── kafka_consumer.py
 │   │   ├── analytics_writer.py
 │   │   └── telemetry.py
-│   │
-│   ├── generator/
-│   │   └── generate_users.py
-│   │
-│   ├── producer/
-│   │   └── mock_writer.py
-│   │
+│   ├── generator/generate_users.py
+│   ├── producer/mock_writer.py
 │   └── utils/
-│       ├── json_formatter.py
-│       └── logger.py
-│
-└── README.md
+└── requirements.txt
+```
 
-End-to-End Data Flow
+## Prerequisites
 
-1. Source transaction
+- Docker Engine and Docker Compose v2 (`docker compose`)
+- `curl` for connector registration and health checks
+- Available local ports listed in the table below
 
-The source database contains:
+You do not need a local Python environment to run the consumer or generator: both are built as containers. Python is only needed if you want to run or develop the application directly on your host.
 
-public.users
+## Run locally
 
-Example:
+Run these commands from the repository root.
 
-INSERT INTO users(name, email)
-VALUES ('Maria', 'maria@example.com');
+### 1. Review local configuration
 
-or:
+The Compose file reads environment variables from `docker/.env`. Review that file before starting the stack. The committed values are intended only for local development; replace them for any shared or exposed environment, and do not commit real credentials.
 
-UPDATE users
-SET name = 'Maria Silva'
-WHERE id = 1;
+### 2. Start the stack
 
-or:
-
-DELETE FROM users
-WHERE id = 1;
-
-2. PostgreSQL WAL
-
-PostgreSQL is configured with:
-
-wal_level = logical
-
-This enables logical replication information to be generated in the Write-Ahead Log.
-
-Debezium consumes this change stream through PostgreSQL logical replication.
-
-3. Debezium
-
-The connector monitors:
-
-public.users
-
-using:
-
-plugin.name = pgoutput
-
-and publishes CDC events using the topic prefix:
-
-cdc
-
-Therefore the resulting Kafka topic is:
-
-cdc.public.users
-
-The connector uses:
-
-snapshot.mode = initial
-
-which means an initial snapshot can be taken before Debezium continues with streaming changes.
-
-4. Kafka
-
-The event is published to:
-
-cdc.public.users
-
-The Python consumer uses:
-
-group.id = cdc-consumer-group
-
-and reads from the earliest available offset when no committed offset exists:
-
-auto.offset.reset = earliest
-
-The consumer also records Kafka metadata such as:
-
-topic
-
-partition
-
-offset
-
-These values are included in the OpenTelemetry trace attributes.
-
-5. Python CDC Consumer
-
-The consumer:
-
-Polls Kafka.
-
-Validates the Kafka message.
-
-Deserializes the JSON payload.
-
-Extracts the Debezium payload.
-
-Identifies the CDC operation.
-
-Extracts the source table.
-
-Determines the record ID.
-
-Writes the event to PostgreSQL Analytics.
-
-Emits OpenTelemetry metrics.
-
-Creates an OpenTelemetry trace.
-
-The main processing span is:
-
-cdc.process
-
-with child spans:
-
-cdc.deserialize
-cdc.analytics.write
-
-6. Analytics Database
-
-Processed events are stored in:
-
-analytics_db.cdc_events
-
-Schema:
-
-CREATE TABLE IF NOT EXISTS cdc_events
-(
-    id SERIAL PRIMARY KEY,
-    event_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    operation VARCHAR(10),
-    source_table VARCHAR(100),
-    record_id INTEGER,
-    payload JSONB
-);
-
-This provides an audit-friendly representation of the CDC stream.
-
-Debezium Event Model
-
-A typical event has the following conceptual structure:
-
-{
-  "payload": {
-    "before": null,
-    "after": {
-      "id": 1,
-      "name": "Maria",
-      "email": "maria@example.com"
-    },
-    "op": "c",
-    "source": {
-      "table": "users"
-    }
-  }
-}
-
-The important Debezium operation codes are:
-
-Code
-
-Meaning
-
-c
-
-Create / Insert
-
-u
-
-Update
-
-d
-
-Delete
-
-r
-
-Read / Snapshot
-
-The consumer maps these events into the analytics table.
-
-OpenTelemetry
-
-The CDC consumer is instrumented using the OpenTelemetry Python SDK.
-
-Telemetry is exported using:
-
-OTLP/gRPC
-
-to:
-
-otel-collector:4317
-
-The service identifies itself as:
-
-service.name = cdc-consumer
-
-and uses:
-
-service.version = 1.0.0
-deployment.environment = local
-
-Trace Model
-
-A CDC message produces a trace similar to:
-
-cdc.process
-│
-├── cdc.deserialize
-│
-└── cdc.analytics.write
-
-The parent span includes attributes such as:
-
-messaging.system
-messaging.destination.name
-messaging.kafka.partition
-messaging.kafka.offset
-messaging.destination_kind
-cdc.operation
-cdc.source_table
-cdc.record_id
-
-This makes it possible to correlate:
-
-Kafka message
-      ↓
-CDC processing
-      ↓
-deserialization
-      ↓
-analytics database write
-
-Application Metrics
-
-The consumer exposes OpenTelemetry metrics including:
-
-Messages consumed
-
-cdc.messages.consumed
-
-Number of Kafka messages received.
-
-Messages processed
-
-cdc.messages.processed
-
-Number of CDC messages successfully persisted.
-
-Messages failed
-
-cdc.messages.failed
-
-Number of processing failures.
-
-Processing duration
-
-cdc.processing.duration
-
-Histogram measuring message processing time in milliseconds.
-
-These metrics are exported to the OpenTelemetry Collector and exposed to Prometheus.
-
-Observability Pipeline
-
-             OTLP
-Python ──────────────────► OpenTelemetry Collector
-                               │
-                ┌──────────────┴──────────────┐
-                │                             │
-                ▼                             ▼
-             Jaeger                      Prometheus
-             Traces                       Metrics
-                │                             │
-                └──────────────┬──────────────┘
-                               ▼
-                            Grafana
-
-The Collector configuration defines separate pipelines for:
-
-traces
-metrics
-
-It also applies:
-
-memory_limiter
-batch
-
-processors.
-
-Local Endpoints
-
-After the stack is running:
-
-Service
-
-URL
-
-Purpose
-
-Grafana
-
-http://localhost:3000
-
-Dashboards
-
-Jaeger
-
-http://localhost:16686
-
-Distributed traces
-
-Prometheus
-
-http://localhost:9090
-
-Metrics / PromQL
-
-Kafka Connect
-
-http://localhost:8083
-
-Connector REST API
-
-Schema Registry
-
-http://localhost:8081
-
-Schema management
-
-OTel Collector metrics
-
-http://localhost:8889/metrics
-
-Collector metrics
-
-PostgreSQL CDC
-
-localhost:5432
-
-Source database
-
-PostgreSQL Analytics
-
-localhost:5433
-
-Analytics database
-
-Kafka
-
-localhost:9092
-
-Kafka broker
-
-Quick Start
-
-Prerequisites
-
-Install:
-
-Docker
-
-Docker Compose
-
-curl
-
-Git
-
-Verify:
-
-docker --version
-docker compose version
-curl --version
-
-Start the Environment
-
-From the project root:
-
+```bash
 cd docker
-
-The project provides a bootstrap script that creates the local .env, starts the stack, waits for Kafka Connect, and registers the Debezium connector:
-
-./bootstrap.sh
-
-Alternatively, start the infrastructure manually:
-
 docker compose up -d --build
+```
 
-Then register the connector:
+This starts the source and analytics databases, Kafka and its supporting services, Kafka Connect, the consumer, the synthetic data generator, and the observability components.
 
-curl -X POST \
-  -H "Content-Type: application/json" \
-  http://localhost:8083/connectors \
-  -d @connect/debezium-connector.json
+Check service status and logs:
 
-Verify the Environment
+```bash
+docker compose ps
+docker compose logs -f kafka-connect cdc_consumer
+```
 
-Check containers:
+### 3. Register the Debezium connector
 
-docker ps
+Check whether the connector is already registered:
 
-Check Kafka Connect:
+```bash
+curl -s http://localhost:8083/connectors
+```
 
-curl http://localhost:8083/connectors
+If it is not listed, register the JSON connector from the `docker/` directory:
 
-Check the Debezium connector:
+```bash
+curl -i -X POST \
+  -H 'Content-Type: application/json' \
+  --data @connect/debezium-connector.json \
+  http://localhost:8083/connectors
+```
 
-curl http://localhost:8083/connectors/postgres-users-connector/status
+Inspect its status:
 
-Expected state:
+```bash
+curl -s http://localhost:8083/connectors/postgres-users-connector/status
+```
 
-RUNNING
+The connector name in the URL must match the `name` field in the connector configuration. A healthy connector should report a `RUNNING` state for its connector and task.
 
-Generate CDC Events
+> If the connector configuration has already been registered, do not POST it again. Kafka Connect will return a conflict response. Inspect its status or update its configuration instead.
 
-The project includes a continuously running data generator.
+### 4. Confirm the consumer is running
 
-It randomly performs:
+The consumer is started by Compose. Follow its logs:
 
-INSERT  60%
-UPDATE  30%
-DELETE  10%
+```bash
+docker compose logs -f cdc_consumer
+```
 
-with a delay between operations.
+The consumer subscribes to `cdc.public.users` and writes processed events to `analytics_db.public.cdc_events`.
 
-You can also generate events manually.
+## Verify the CDC pipeline
 
-Connect to the source database:
+The synthetic generator continuously performs inserts, updates, and deletes against the source database. You can also create a test change manually.
 
-docker exec -it postgres_cdc \
-  psql -U postgres -d app_db
+### Insert a test record
 
-Insert:
+Open a source database shell:
 
-INSERT INTO users(name, email)
-VALUES ('Kafka CDC Test', 'cdc@example.com');
+```bash
+docker exec -it postgres_cdc psql -U postgres -d app_db
+```
 
-Update:
+Run:
 
-UPDATE users
-SET name = 'Kafka CDC Updated'
-WHERE email = 'cdc@example.com';
+```sql
+INSERT INTO public.users (name, email)
+VALUES ('CDC Test', 'cdc-test@example.com');
+```
 
-Delete:
+You can also test updates and deletes:
 
-DELETE FROM users
-WHERE email = 'cdc@example.com';
+```sql
+UPDATE public.users
+SET email = 'cdc-test-updated@example.com'
+WHERE email = 'cdc-test@example.com';
 
-Verify CDC in Kafka
+DELETE FROM public.users
+WHERE email = 'cdc-test-updated@example.com';
+```
 
-Inspect the topic from the Kafka container:
+### Inspect captured events
 
-docker exec -it kafka \
-  kafka-topics --bootstrap-server kafka:29092 --list
+Open the analytics database:
 
-The expected CDC topic is:
+```bash
+docker exec -it postgres_analytics psql -U analytics -d analytics_db
+```
 
-cdc.public.users
+Query the event table:
 
-Consume events:
-
-docker exec -it kafka \
-  kafka-console-consumer \
-  --bootstrap-server kafka:29092 \
-  --topic cdc.public.users \
-  --from-beginning
-
-Verify Analytics Persistence
-
-Connect to the analytics database:
-
-docker exec -it postgres_analytics \
-  psql -U analytics -d analytics_db
-
-Query CDC events:
-
+```sql
 SELECT
     id,
     event_timestamp,
@@ -763,607 +248,135 @@ SELECT
     source_table,
     record_id,
     payload
-FROM cdc_events
+FROM public.cdc_events
 ORDER BY id DESC
 LIMIT 20;
+```
 
-Observe Traces in Jaeger
+Debezium operation codes commonly used by this pipeline:
 
-Open:
+| Code | Meaning |
+|---|---|
+| `c` | Create / insert |
+| `u` | Update |
+| `d` | Delete |
+| `r` | Snapshot read |
 
-http://localhost:16686
+For deletes, the record identifier may be derived from the event's `before` image when `after` is null.
 
-Search for the service:
+## Observability
 
-cdc-consumer
+### Local interfaces
 
-Look for spans such as:
+| Component | URL | Use |
+|---|---|---|
+| Grafana | [http://localhost:3000](http://localhost:3000) | CDC and telemetry dashboards |
+| Jaeger | [http://localhost:16686](http://localhost:16686) | Search and inspect distributed traces |
+| Prometheus | [http://localhost:9090](http://localhost:9090) | Query scraped metrics and check targets |
+| Kafka Connect REST API | [http://localhost:8083](http://localhost:8083) | Manage connectors and inspect status |
+| Schema Registry | [http://localhost:8081](http://localhost:8081) | Schema Registry API |
+| OTel Collector metrics | [http://localhost:8889/metrics](http://localhost:8889/metrics) | Collector-exported Prometheus metrics |
 
-cdc.process
-cdc.deserialize
-cdc.analytics.write
+Grafana's local development credentials are configured in `docker/.env`. Change them before exposing the service beyond your machine.
 
-A trace should allow you to follow the processing of an individual Kafka event.
+### Traces
 
-Observe Metrics in Prometheus
+The consumer creates a `cdc.process` span for each message and child spans for deserialization and analytics persistence. Attributes include the Kafka topic, partition, offset, CDC operation, source table, and record ID. In Jaeger, select the `cdc-consumer` service and search for traces after generating changes.
 
-Open:
+### Application metrics
 
-http://localhost:9090
+The consumer instruments these metrics:
 
-Example queries:
+- `cdc.messages.consumed` — messages received from Kafka.
+- `cdc.messages.processed` — events successfully written to the analytics database.
+- `cdc.messages.failed` — processing or consumer errors.
+- `cdc.processing.duration` — message-processing duration in milliseconds.
 
-rate(cdc_messages_processed_total[1m])
+The Collector exposes metrics at port `8889`, which Prometheus scrapes every five seconds. Metric names may be normalized by the OpenTelemetry Prometheus exporter; search the Prometheus UI for `cdc` or `otelcol` if a metric is not found under its original instrumentation name.
 
-rate(cdc_messages_failed_total[1m])
+## Useful commands
 
-sum(cdc_messages_processed_total)
+Run from the `docker/` directory unless otherwise stated.
 
-For processing latency:
-
-histogram_quantile(
-  0.95,
-  sum(
-    rate(cdc_processing_duration_milliseconds_bucket[5m])
-  ) by (le)
-)
-
-Grafana
-
-Open:
-
-http://localhost:3000
-
-The Docker Compose configuration provisions Grafana dashboards and data sources.
-
-The OpenTelemetry dashboard includes panels for:
-
-CDC messages processed per second
-
-CDC messages failed per second
-
-CDC processing duration
-
-Total messages processed
-
-The CDC dashboard provides CDC-oriented operational visibility.
-
-Testing Error Handling
-
-The consumer contains a controlled failure mechanism.
-
-A message containing:
-
-{
-  "test_error": true
-}
-
-triggers:
-
-SIMULATED_CDC_ERROR
-
-The exception is:
-
-recorded in the OpenTelemetry span
-
-marked as an error
-
-logged by the consumer
-
-counted by cdc.messages.failed
-
-This provides a simple way to demonstrate failure observability during an interview or local test.
-
-Avro / Schema Registry
-
-The environment also includes Confluent Schema Registry:
-
-http://localhost:8081
-
-and the repository contains:
-
-schemas/users.avsc
-
-There is an alternative connector configuration:
-
-docker/connect/debezium-connector-avro.json
-
-The default connector currently uses Kafka Connect JSON converters:
-
-JsonConverter
-
-The Avro connector configuration is available as an alternative for demonstrating schema-based serialization with Schema Registry.
-
-Configuration
-
-The main environment variables are:
-
-CDC_POSTGRES_HOST
-CDC_POSTGRES_USER
-CDC_POSTGRES_PASSWORD
-CDC_POSTGRES_PORT
-CDC_POSTGRES_DB
-
-ANL_POSTGRES_HOST
-ANL_POSTGRES_USER
-ANL_POSTGRES_PASSWORD
-ANL_POSTGRES_PORT
-ANL_POSTGRES_DB
-
-GF_SECURITY_ADMIN_USER
-GF_SECURITY_ADMIN_PASSWORD
-
-OpenTelemetry variables used by the consumer include:
-
-OTEL_SERVICE_NAME
-OTEL_SERVICE_VERSION
-OTEL_ENVIRONMENT
-OTEL_EXPORTER_OTLP_ENDPOINT
-
-For local Docker execution, the consumer sends telemetry to:
-
-http://otel-collector:4317
-
-Useful Docker Commands
-
-Start:
-
-docker compose up -d
-
-Rebuild:
-
+```bash
+# Start or rebuild all services
 docker compose up -d --build
 
-Stop:
+# Show status
+docker compose ps
 
+# Follow application and connector logs
+docker compose logs -f cdc_consumer kafka-connect
+
+# Inspect a connector and its task status
+curl -s http://localhost:8083/connectors/postgres-users-connector/status
+
+# List Kafka topics from inside the broker container
+docker exec -it kafka kafka-topics \
+  --bootstrap-server kafka:29092 --list
+
+# Stop containers but retain named volumes
 docker compose down
 
-Stop and remove volumes:
-
+# Stop containers and delete persisted local data (destructive)
 docker compose down -v
+```
 
-Follow consumer logs:
+## Configuration notes
 
-docker logs -f cdc_consumer
+- **Source database:** `app_db`, table `public.users`, container `postgres_cdc`, host port `5432`. Logical WAL settings are enabled for CDC.
+- **Analytics database:** `analytics_db`, table `public.cdc_events`, container `postgres_analytics`, host port `5433`.
+- **Kafka topic:** `cdc.public.users`.
+- **Kafka Connect REST API:** host port `8083`.
+- **Telemetry transport:** the consumer exports traces and metrics over OTLP/gRPC to `otel-collector:4317` on the Compose network. OTLP/HTTP is also exposed by the Collector on port `4318`.
+- **Persistence:** named Docker volumes retain database, Grafana, and Prometheus data across ordinary container restarts. Initialization SQL is applied when the corresponding database volume is first created; changing an init script does not automatically rebuild an existing database.
+- **Security:** the sample environment uses simple development credentials and unencrypted local service endpoints. Use secrets management, least-privilege access, TLS, and hardened network configuration for production deployments.
 
-Follow Debezium / Kafka Connect logs:
+## Troubleshooting
 
-docker logs -f kafka_connect
+**Connector is missing or not running**
 
-Follow OpenTelemetry Collector logs:
+```bash
+curl -s http://localhost:8083/connectors
+curl -s http://localhost:8083/connectors/postgres-users-connector/status
+docker compose logs -f kafka-connect
+```
 
-docker logs -f otel_collector
+Check that PostgreSQL is healthy, Kafka Connect can reach the broker, and the connector configuration matches the source database and replication settings.
 
-Follow Prometheus logs:
+**No events appear in Kafka**
 
-docker logs -f prometheus
+Confirm that the connector task is `RUNNING`, the source table is `public.users`, and the topic is `cdc.public.users`. Then insert a new source row and inspect Kafka Connect logs.
 
-Troubleshooting
+**No rows appear in `cdc_events`**
 
-Kafka Connect is not available
+Check the consumer logs, topic name, and analytics database connection. Confirm that the consumer can reach Kafka and `postgres_analytics` on the Compose network.
 
-Check:
+**No traces appear in Jaeger**
 
-docker logs kafka_connect
+Check `docker compose logs -f cdc_consumer otel-collector jaeger`. Confirm the consumer's `OTEL_EXPORTER_OTLP_ENDPOINT` is `http://otel-collector:4317` and that the Collector trace pipeline exports to Jaeger.
 
-Then:
+**No metrics appear in Prometheus**
 
-curl http://localhost:8083/
+Open [Prometheus targets](http://localhost:9090/targets) and verify the `opentelemetry-collector` target is up. You can also inspect [the Collector metrics endpoint](http://localhost:8889/metrics).
 
-Connector is not running
+**A configuration or initialization change does not take effect**
 
-Check:
+Recreate the affected container as needed. Database initialization scripts only run for a newly initialized data directory; deleting volumes with `docker compose down -v` resets local state and permanently removes persisted data.
 
-curl http://localhost:8083/connectors/postgres-users-connector/status
+## Learning objectives
 
-and inspect:
+This project is intended to provide hands-on practice with:
 
-docker logs kafka_connect
+- Log-based Change Data Capture using PostgreSQL WAL and Debezium.
+- Kafka topics, consumer groups, offsets, and event-driven integration.
+- Python event processing and persistence into an analytics store.
+- CDC operation handling for inserts, updates, deletes, and snapshots.
+- OpenTelemetry instrumentation with spans, attributes, counters, and histograms.
+- Collector pipelines and OTLP transport.
+- Metrics scraping with Prometheus, trace exploration with Jaeger, and dashboards in Grafana.
+- Docker Compose service orchestration, health checks, networking, and persistent volumes.
 
-Common areas to verify:
+## License
 
-PostgreSQL is healthy
-
-wal_level=logical
-
-connector configuration
-
-replication slot
-
-publication
-
-Kafka broker availability
-
-No CDC events are arriving
-
-Check the topic:
-
-docker exec -it kafka \
-  kafka-topics --bootstrap-server kafka:29092 --list
-
-Then inspect the consumer:
-
-docker logs -f cdc_consumer
-
-Also verify the source table:
-
-SELECT * FROM public.users;
-
-No traces in Jaeger
-
-Verify the Collector:
-
-docker logs -f otel_collector
-
-Verify that the consumer has:
-
-OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-
-Verify Jaeger:
-
-http://localhost:16686
-
-No metrics in Prometheus
-
-Check the Collector endpoint:
-
-curl http://localhost:8889/metrics
-
-Then verify Prometheus targets:
-
-http://localhost:9090/targets
-
-The configured target is:
-
-otel-collector:8889
-
-Security Notes
-
-This repository is designed as a local development / interview laboratory.
-
-The default credentials in the Docker configuration are intentionally simple:
-
-postgres / postgres
-analytics / analytics
-admin / admin
-
-Do not use these credentials in production.
-
-For a production implementation, replace them with:
-
-Docker secrets / Kubernetes Secrets
-
-Azure Key Vault
-
-AWS Secrets Manager
-
-HashiCorp Vault
-
-managed identity / workload identity
-
-TLS for Kafka and databases
-
-authentication and authorization
-
-network isolation
-
-least-privilege RBAC
-
-Also avoid committing real .env files or credentials to Git.
-
-Production Evolution
-
-This local architecture can be evolved into a cloud-native platform:
-
-PostgreSQL
-    │
-    ▼
-Debezium / Kafka Connect
-    │
-    ▼
-Kafka / Azure Event Hubs
-    │
-    ├──────────────► Stream Processing
-    │                ├── Databricks
-    │                └── Flink
-    │
-    ▼
-Data Lake / Data Warehouse
-    │
-    ├── ADLS Gen2
-    ├── Snowflake
-    └── Azure PostgreSQL
-
-The observability layer can evolve toward:
-
-OpenTelemetry
-      │
-      ├── Metrics → Prometheus / Azure Monitor
-      ├── Traces  → Jaeger / Application Insights
-      └── Logs    → centralized logging platform
-
-Infrastructure can subsequently be managed with:
-
-Terraform
-+
-Kubernetes / AKS
-+
-CI/CD
-+
-Secrets Management
-
-Senior Data Engineer Interview Topics Covered
-
-This project can be used to discuss:
-
-CDC
-
-What is Change Data Capture?
-
-Why use WAL-based CDC?
-
-Snapshot vs streaming
-
-Logical replication
-
-Replication slots
-
-Publications
-
-Idempotency
-
-Deletes and tombstones
-
-Schema evolution
-
-Debezium
-
-Connector lifecycle
-
-Snapshot modes
-
-Offset management
-
-Schema history
-
-PostgreSQL pgoutput
-
-Connector failure and restart
-
-Replication slot management
-
-Kafka
-
-Topic / partition / offset
-
-Consumer groups
-
-Ordering
-
-Consumer lag
-
-At-least-once processing
-
-Rebalancing
-
-Retention
-
-Replication factor
-
-Backpressure
-
-Observability
-
-Metrics vs logs vs traces
-
-OpenTelemetry
-
-OTLP
-
-Collector pipelines
-
-Prometheus scraping
-
-Distributed tracing
-
-Trace context
-
-Error instrumentation
-
-Latency percentiles
-
-Production Architecture
-
-HA Kafka
-
-Multiple Kafka Connect workers
-
-Connector scaling
-
-Dead Letter Queues
-
-Retry strategies
-
-Idempotent consumers
-
-Schema Registry
-
-Security
-
-TLS / SASL
-
-Secrets management
-
-Kubernetes
-
-Infrastructure as Code
-
-Design Decisions
-
-Why Debezium?
-
-Debezium provides a standardized way to capture database changes from PostgreSQL without coupling the source application to the downstream consumers.
-
-This separates:
-
-OLTP application
-
-from:
-
-CDC / streaming consumers
-
-Why Kafka?
-
-Kafka provides a durable event streaming layer between the source and consumers.
-
-This enables:
-
-decoupling
-
-replay
-
-multiple consumers
-
-scalable processing
-
-consumer groups
-
-independent downstream systems
-
-Why OpenTelemetry?
-
-OpenTelemetry keeps instrumentation independent from a specific observability backend.
-
-The same application instrumentation can therefore be routed to different platforms without changing the business logic.
-
-Limitations of the Current Lab
-
-This project intentionally keeps the environment simple for local development.
-
-It currently uses:
-
-single Kafka broker
-
-replication factor 1
-
-local ZooKeeper
-
-local PostgreSQL
-
-local Docker networking
-
-plaintext Kafka
-
-simple credentials
-
-direct PostgreSQL persistence
-
-no production-grade DLQ
-
-no multi-node failover
-
-no Kubernetes deployment
-
-These are appropriate trade-offs for a local technical demonstration, but would need to be addressed for production.
-
-Roadmap
-
-Potential next iterations:
-
-Kafka replication factor > 1
-
-Kafka Connect distributed mode
-
-Dead Letter Queue
-
-Retry / backoff strategy
-
-Idempotent analytics writes
-
-Consumer lag monitoring
-
-Kafka exporter
-
-Avro + Schema Registry as default
-
-Schema evolution tests
-
-Terraform infrastructure
-
-Kubernetes / AKS deployment
-
-Azure Event Hubs integration
-
-ADLS Gen2 sink
-
-Snowflake sink
-
-CI/CD with GitHub Actions
-
-Secrets management with Azure Key Vault
-
-TLS / SASL authentication
-
-Automated integration tests
-
-Load testing and throughput benchmarks
-
-Learning Outcome
-
-This project provides a compact but realistic demonstration of a modern streaming data platform:
-
-PostgreSQL
-    ↓
-Logical Replication / WAL
-    ↓
-Debezium
-    ↓
-Kafka
-    ↓
-Python Consumer
-    ↓
-Analytics PostgreSQL
-
-with an independent observability path:
-
-Python Consumer
-    ↓
-OpenTelemetry
-    ↓
-OTel Collector
-    ├──→ Jaeger
-    └──→ Prometheus
-              ↓
-           Grafana
-
-The architecture demonstrates how data movement and system observability can be designed together, which is an important concern in production-grade Data Engineering platforms.
-
-Author
-
-Vitor Melo
-
-Data Engineer | Data Platform & Analytics
-
-Focus areas:
-
-Data Engineering
-
-Data Platforms
-
-CDC
-
-Kafka
-
-Debezium
-
-Azure
-
-Snowflake
-
-dbt
-
-Airflow
-
-Observability
-
-Cloud Data Architecture
+Add a license file before distributing or reusing this project publicly. Until a license is specified, no additional license is implied.
