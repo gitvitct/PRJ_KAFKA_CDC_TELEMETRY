@@ -1,0 +1,191 @@
+{
+  "title": "Kafka CDC Monitoring",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 2,
+  "refresh": "10s",
+  "style": "dark",
+  "tags": [
+    "cdc",
+    "debezium",
+    "kafka",
+    "postgres",
+    "monitoring"
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Total CDC Events",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT COUNT(*) AS total FROM cdc_events;",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "🟢 Total Inserts",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 0
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT COUNT(*) AS total FROM cdc_events WHERE operation='c';",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "🟡 Total Updates",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT COUNT(*) AS total FROM cdc_events WHERE operation='u';",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "🔴 Total Deletes",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT COUNT(*) AS total FROM cdc_events WHERE operation='d';",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "⏱ Last Event Received",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT MAX(event_timestamp) AS last_event FROM cdc_events;",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Events by Operation",
+      "type": "piechart",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 4
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT CASE operation WHEN 'c' THEN '🟢 Inserts' WHEN 'u' THEN '🟡 Updates' WHEN 'd' THEN '🔴 Deletes' WHEN 'r' THEN '🔵 Snapshot' ELSE '⚪ Unknown' END AS operation_type, COUNT(*) AS total FROM cdc_events GROUP BY operation ORDER BY total DESC;"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "CDC Events by Table",
+      "type": "barchart",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 4
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT source_table, COUNT(*) AS total_events FROM cdc_events GROUP BY source_table ORDER BY total_events DESC;"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Events Per Minute",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 4
+      },
+      "targets": [
+        {
+          "format": "time_series",
+          "rawSql": "SELECT date_trunc('minute', event_timestamp) AS time, COUNT(*) AS events_per_minute FROM cdc_events GROUP BY 1 ORDER BY 1;"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "CDC Events Timeline",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 12
+      },
+      "targets": [
+        {
+          "format": "time_series",
+          "rawSql": "SELECT date_trunc('minute', event_timestamp) AS time, COUNT(*) AS total FROM cdc_events GROUP BY 1 ORDER BY 1;"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Latest CDC Events",
+      "type": "table",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawSql": "SELECT id, CASE operation WHEN 'c' THEN '🟢 Insert' WHEN 'u' THEN '🟡 Update' WHEN 'd' THEN '🔴 Delete' WHEN 'r' THEN '🔵 Snapshot' ELSE '⚪ Unknown' END AS operation, source_table, record_id, event_timestamp FROM cdc_events ORDER BY event_timestamp DESC LIMIT 50;"
+        }
+      ]
+    }
+  ],
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  }
+}

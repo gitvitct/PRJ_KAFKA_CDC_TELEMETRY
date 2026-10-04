@@ -1,0 +1,238 @@
+# ============================================================
+# Python
+# ============================================================
+
+**pycache**/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# Virtual environments
+
+.venv/
+venv/
+env/
+ENV/
+
+# Python packaging
+
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Test / coverage
+
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# Type checkers / linters
+
+.mypy_cache/
+.pyre/
+.ruff_cache/
+
+# ============================================================
+# Environment & Secrets
+# ============================================================
+
+.env
+.env.*
+!.env.example
+
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# ============================================================
+# IDE / Editors
+# ============================================================
+
+.vscode/
+.idea/
+*.iml
+
+# Vim
+
+*.swp
+*.swo
+
+# macOS
+
+.DS_Store
+
+# Windows
+
+Thumbs.db
+Desktop.ini
+
+# ============================================================
+# Docker
+# ============================================================
+
+# Local Docker overrides
+
+docker-compose.override.yml
+docker-compose.local.yml
+
+# Docker volumes / local persistent data
+
+docker/data/
+docker/volumes/
+docker/*/data/
+docker/*/logs/
+
+# ============================================================
+# Kafka
+# ============================================================
+
+# Kafka local data
+
+kafka-data/
+kafka-logs/
+**/kafka-data/
+**/kafka-logs/
+
+# Kafka Connect local state
+
+connect-data/
+**/connect-data/
+
+# ============================================================
+# PostgreSQL
+# ============================================================
+# Local database data
+
+postgres-data/
+postgresql-data/
+**/postgres-data/
+**/postgresql-data/
+
+# Database dumps / backups
+
+*.sql.gz
+*.dump
+*.backup
+
+# ============================================================
+# Prometheus
+# ============================================================
+
+prometheus-data/
+**/prometheus-data/
+
+# ============================================================
+# Grafana
+# ============================================================
+
+grafana-data/
+**/grafana-data/
+
+# Grafana local database
+
+grafana.db
+
+# ============================================================
+# OpenTelemetry
+# ============================================================
+
+otel-data/
+**/otel-data/
+
+# ============================================================
+# Jaeger
+# ============================================================
+
+jaeger-data/
+**/jaeger-data/
+
+# ============================================================
+# Logs
+# ============================================================
+
+*.log
+logs/
+**/logs/
+
+# ============================================================
+# Temporary / Runtime Files
+# ============================================================
+
+*.tmp
+*.temp
+*.pid
+*.lock
+
+tmp/
+temp/
+
+# ============================================================
+# Generated files
+# ============================================================
+
+*.generated
+*.cache
+
+# ============================================================
+# Local configuration
+# Keep templates/examples in Git
+# ============================================================
+
+config.local.*
+*-local.*
+local.*
+
+# ============================================================
+# Jupyter
+# ============================================================
+
+.ipynb_checkpoints/
+
+# ============================================================
+# OS / Misc
+# ============================================================
+
+*.bak
+*.orig
+*.rej
+
+# ============================================================
+# Secrets / Credentials
+# ============================================================
+
+credentials.json
+secrets.json
+service-account.json
+*credentials*.json
+*secret*.json
+
+# ============================================================
+# Project-specific
+# ============================================================
+
+# Local test payloads
+
+test-output/
+output/
+
+# Local generated telemetry
+
+telemetry-output/
+
+# Local connector artifacts
+
+connector-output/
+
+
+# ============================================================
+# ZIP
+# ============================================================
+
+project_KAFKA_CDC_TELEMETRY_docs.zip

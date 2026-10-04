@@ -1,0 +1,20 @@
+{
+  "name": "postgres-users-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "postgres",
+    "database.password": "postgres",
+    "database.dbname": "app_db",
+    "topic.prefix": "cdc",
+    "plugin.name": "pgoutput",
+    "slot.name": "debezium_slot",
+    "publication.name": "debezium_publication",
+    "publication.autocreate.mode": "filtered",
+    "table.include.list": "public.users",
+    "snapshot.mode": "initial",
+    "tombstones.on.delete": "false"
+  }
+}

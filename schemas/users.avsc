@@ -1,0 +1,28 @@
+{
+  "type": "record",
+  "name": "User",
+  "namespace": "com.portfolio.cdc.users",
+  "doc": "User entity captured via CDC from PostgreSQL",
+
+  "fields": [
+    {
+      "name": "id",
+      "type": "int"
+    },
+    {
+      "name": "name",
+      "type": ["null", "string"],
+      "default": null
+    },
+    {
+      "name": "email",
+      "type": ["null", "string"],
+      "default": null
+    },
+    {
+      "name": "created_at",
+      "type": ["null", "string"],
+      "default": null
+    }
+  ]
+}
