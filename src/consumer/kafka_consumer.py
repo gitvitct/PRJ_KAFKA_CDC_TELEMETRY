@@ -257,4 +257,3 @@ class CDCConsumer:
                     msg.offset(),
                     duration_ms,
                 )
-
